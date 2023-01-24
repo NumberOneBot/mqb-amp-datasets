@@ -1,0 +1,341 @@
+//------------------------------------------------
+//--- 010 Editor v13.0 Binary Template
+//
+//      File: *.0xD0000.BIN
+//   Authors: Alex Strelets
+//   Version: 0.1
+//   Purpose: Parse the contents of the datasets of external amplifiers for MQB platform
+//  Category: 
+// File Mask: 
+//  ID Bytes: 
+//   History: 
+//------------------------------------------------
+
+LittleEndian();
+
+local ushort offset = FileSize() - 65536;
+
+// ---------------------- START EQTool HEADER ---------------------
+
+Printf("\nEQTools Header Offset: %i", offset);
+if (offset > 0) {
+    struct {
+        char AmpName[13] <bgcolor=cDkGray, fgcolor=cGray>;
+        FSeek(24);
+        char HeaderCarPlatform[5] <bgcolor=cDkGray, fgcolor=cGray>;
+        char HeaderFwRevision[3] <bgcolor=cDkGray, fgcolor=cGray>;
+        FSeek(33);
+        struct Presets {
+            char Preset1[13] <bgcolor=cBlack, fgcolor=cDkGray>;
+            char Preset2[13] <bgcolor=cBlack, fgcolor=cDkGray>;
+            char Preset3[13] <bgcolor=cBlack, fgcolor=cDkGray>;
+            char Preset4[13] <bgcolor=cBlack, fgcolor=cDkGray>;
+        };
+    
+        Presets SoundFocus;
+        Presets SoundCharacter;
+        Presets SoundCharacterRoofOpen;
+    } EQTool_Header;
+
+    FSeek(offset);
+}
+
+// ---------------------- END EQTool HEADER -----------------------
+
+
+char CarPlatform[5] <bgcolor=cLtGreen>;
+char FwRevision[3] <bgcolor=cLtGreen>;
+
+struct {
+    struct AudioSource {
+        uint Frequency <bgcolor=cAqua>;
+        ubyte Q <bgcolor=cDkYellow, read=Str("%.1f", (float) this / 10)>;
+
+        struct {
+            ubyte HPF_6dB_Oct <bgcolor=cYellow, read=Str(this > 0 ? "Yes" : "No")>; // HPF 6dB/Oct 
+            ubyte empty[2] <bgcolor=cBlack>;
+        } Slope;
+    };
+
+    AudioSource Entertainment;
+    AudioSource Announcement;
+
+} DC_CutFilter;
+
+struct {
+    struct Channel {
+        byte FrontLeft <bgcolor=cLtYellow>;
+        byte FrontRight <bgcolor=cPurple>;
+        byte FrontCenter <bgcolor=cDkPurple>;
+        byte Subwoofer <bgcolor=cDkAqua>;
+        byte RearLeft <bgcolor=cDkGreen>;
+        byte RearRight <bgcolor=cGreen>;
+    };
+
+    struct InputMode {
+        Channel LeftFront;
+        Channel RightFront;
+        Channel LeftRear;
+        Channel RightRear;
+        Channel Center;
+        Channel Subwoofer;
+    };
+
+    InputMode Ch20;
+    InputMode Ch51;
+
+} MatrixMixer;
+
+
+string getFilterType (ubyte value) {
+    if (value == 26) {
+        return "Bass";
+    } else if (value == 27) {
+        return "Treble";
+    } else if (value == 1) {
+        return "EQ"; 
+    }
+    return "None";
+}
+
+string getSignedFloat (short value) {
+    return Str("%.1f", (float) value / 10);
+}
+
+string getGain (float value) {
+    return Str("%.2f", value / 5);
+};
+
+string getPhase( char value) {
+    if ( (string) value == "Z") {
+        return "180'";
+    }
+    return "0'";
+}
+
+struct Band {
+    uint Frequency <bgcolor=cLtGreen>;
+    ubyte Q <bgcolor=cAqua, read=getSignedFloat>;
+    ubyte FilterType <bgcolor=cDkAqua, read=getFilterType>;
+    ubyte empty[2] <bgcolor=cBlack>;
+};
+
+struct {
+    Band Bands[5];
+} UserEqFilters;
+
+struct {
+    Band BassFilter;
+    Band TrebleFilter;
+    Band MiddleFilter;
+} ToneEqFilters;
+
+struct Steps {
+    short minus9 <bgcolor=cDkGreen, read=getSignedFloat>;
+    short minus8 <bgcolor=cDkGreen, read=getSignedFloat>;
+    short minus7 <bgcolor=cDkGreen, read=getSignedFloat>;
+    short minus6 <bgcolor=cDkGreen, read=getSignedFloat>;
+    short minus5 <bgcolor=cDkGreen, read=getSignedFloat>;
+    short minus4 <bgcolor=cDkGreen, read=getSignedFloat>;
+    short minus3 <bgcolor=cDkGreen, read=getSignedFloat>;
+    short minus2 <bgcolor=cDkGreen, read=getSignedFloat>;
+    short minus1 <bgcolor=cDkGreen, read=getSignedFloat>;
+    short zero0  <bgcolor=cAqua, read=getSignedFloat>;
+    short plus1  <bgcolor=cGreen, read=getSignedFloat>;
+    short plus2  <bgcolor=cGreen, read=getSignedFloat>;
+    short plus3  <bgcolor=cGreen, read=getSignedFloat>;
+    short plus4  <bgcolor=cGreen, read=getSignedFloat>;
+    short plus5  <bgcolor=cGreen, read=getSignedFloat>;
+    short plus6  <bgcolor=cGreen, read=getSignedFloat>;
+    short plus7  <bgcolor=cGreen, read=getSignedFloat>;
+    short plus8  <bgcolor=cGreen, read=getSignedFloat>;
+    short plus9  <bgcolor=cGreen, read=getSignedFloat>;
+};
+
+
+struct {
+    Steps BassGains;
+    Steps TrebbleGains;
+    Steps MiddleGains;
+} ToneEqGains;
+
+FSeek(276 + offset);
+struct {
+    struct {
+        short Speed <bgcolor=cDkPurple, read=getSignedFloat>;
+        short Width <bgcolor=cDkAqua, read=getSignedFloat>;
+    } Levels[8];
+
+    byte GainSteps[19] <bgcolor=cGreen, read=getSignedFloat>;
+} GALA;
+
+FSeek(328 + offset);
+struct {
+    byte Neutral <bgcolor=cYellow>;
+    byte Threshold <bgcolor=cPurple>;
+    byte Attack <bgcolor=cDkPurple, read=getSignedFloat>;
+    byte unknowns[5] <bgcolor=cBlack>;
+
+    byte GainSteps[19] <bgcolor=cGreen, read=getSignedFloat>;
+} GADK;
+
+FSeek(356 + offset);
+struct {
+    struct F_Steps {
+        ushort Frequency <bgcolor=cGreen>;
+        short Gain <bgcolor=cDkGreen, read=getSignedFloat>;
+        ubyte Q <bgcolor=cGreen, read=getSignedFloat>;
+        byte FilterType <bgcolor=cDkGreen, read=getFilterType>;
+        byte empty[2] <bgcolor=cBlack>;
+    };
+    
+    struct {
+         F_Steps SpeedSteps[19];   
+    } SpeedBanks[3];
+    
+    struct {
+        F_Steps RPM_Steps[18];
+    } RPM_Banks[2];
+
+    struct {
+        short Levels[8] <bgcolor=cLtYellow, read=getSignedFloat>;
+    } GainFactor;    
+    struct {
+        short start <bgcolor=cDkYellow,read=getSignedFloat>;
+        short width <bgcolor=cYellow, read=getSignedFloat>;
+    } SpeedStep;
+    short RPM_Range[18] <bgcolor=cDkGreen>;
+} GALA_F;
+
+struct {
+    Band Bands[3];
+    
+    struct {
+        ushort Band1 <bgcolor=cLtGreen, read=getSignedFloat>;
+        ushort Band2 <bgcolor=cGreen,   read=getSignedFloat>;
+        ushort Band3 <bgcolor=cDkGreen, read=getSignedFloat>;
+    } GainSteps[16];
+
+    byte VolumeSteps[16] <bgcolor=cYellow, read=Str("%g", (float) this + 100)>;
+} Loudness;
+
+struct {
+    short unknown1 <bgcolor=cDkRed>;
+    short unknown2 <bgcolor=cDkRed>;
+} UnknownSteps[20];
+
+FSeek(1372 + offset);
+
+struct Channels {
+    Steps LeftFront;
+    Steps RightFront;
+    Steps LeftRear;
+    Steps RightRear;
+    Steps Center;
+    Steps Subwoofer;
+};
+
+Steps SubwooferEqGain;
+struct {
+    Channels Balance;
+    Channels Fader;
+} ChannelsBalanceFader;
+
+
+FSeek(1866 + offset);
+FSeek(1698 + offset);
+char DriverSide <bgcolor=cYellow>;
+byte EmptyByte <bgcolor=cBlack>;
+struct {
+    byte b1 <bgcolor=cDkRed>;
+    byte b2 <bgcolor=cDkRed>;
+    short index <bgcolor=cDkRed>;
+} UnknownChannelGroups[6];
+struct {
+    struct {
+        char FrontLeftTwitter <bgcolor=cLtGreen, read=getPhase>;
+        char FrontLeftWoofer <bgcolor=cGreen, read=getPhase>;
+        char FrontRightTwitter <bgcolor=cLtRed, read=getPhase>;
+        char FrontRightWoofer <bgcolor=cDkYellow, read=getPhase>;
+        char RearLeftTwitter <bgcolor=cLtGreen, read=getPhase>;
+        char RearLeftWoofer <bgcolor=cGreen, read=getPhase>;
+        char RearRightTwitter <bgcolor=cLtRed, read=getPhase>;
+        char RearRightWoofer <bgcolor=cDkYellow, read=getPhase>;
+        char Center <bgcolor=cAqua, read=getPhase>;
+        char Subwoofer1 <bgcolor=cDkAqua, read=getPhase>;
+        char Subwoofer2 <bgcolor=cDkAqua, read=getPhase>;
+        char NOT_USED <bgcolor=cPurple, read=getPhase>;
+    } Phase;
+    struct {
+        byte FrontLeftTwitter <bgcolor=cLtGreen, read=getGain>;
+        byte FrontLeftWoofer <bgcolor=cGreen, read=getGain>;
+        byte FrontRightTwitter <bgcolor=cLtRed, read=getGain>;
+        byte FrontRightWoofer <bgcolor=cDkYellow, read=getGain>;
+        byte RearLeftTwitter <bgcolor=cLtGreen, read=getGain>;
+        byte RearLeftWoofer <bgcolor=cGreen, read=getGain>;
+        byte RearRightTwitter <bgcolor=cLtRed, read=getGain>;
+        byte RearRightWoofer <bgcolor=cDkYellow, read=getGain>;
+        byte Center <bgcolor=cAqua, read=getGain>;
+        byte Subwoofer1 <bgcolor=cDkAqua, read=getGain>;
+        byte Subwoofer2 <bgcolor=cDkAqua, read=getGain>;
+        byte NOT_USED <bgcolor=cPurple, read=getGain>;
+    } Gains;
+} OutputMixer;
+
+struct {
+    byte IndexesMapping[12] <bgcolor=cAqua>;
+
+    struct Limiter {
+        ubyte threshold <bgcolor=cDkGreen>;
+        ubyte attack <bgcolor=cGreen, read=Str("%g", this * 0.04)>;
+        ushort release <bgcolor=cYellow, read=Str("%5.3f", (float) this / 1000)>;
+    };
+
+    struct {
+        Limiter RearRightTwitter;
+        Limiter RearLeftTwitter;
+        Limiter Center;
+        Limiter FrontRightWoofer;
+        Limiter RearRightWoofer;
+        Limiter RearLeftWoofer;
+        Limiter FrontRightTwitter;
+        Limiter Subwoofer1;
+        Limiter Subwoofer2;
+        Limiter FrontLeftWoofer;
+        Limiter NOT_USED;
+        Limiter FrontLeftTwitter;
+    } Limiters;   
+
+    struct {
+        byte booleans[12] <bgcolor=cDkYellow>;
+    } AmpModelType;
+} AmpChannels;
+
+struct {
+    ubyte RearRightTwitter <bgcolor=cDkAqua>;
+    ubyte RearLeftTwitter <bgcolor=cDkAqua>;
+    ubyte Center <bgcolor=cDkAqua>;
+    ubyte FrontRightWoofer <bgcolor=cDkAqua>;
+    ubyte RearRightWoofer <bgcolor=cDkAqua>;
+    ubyte RearLeftWoofer <bgcolor=cDkAqua>;
+    ubyte FrontRightTwitter <bgcolor=cDkAqua>;
+    ubyte Subwoofer1 <bgcolor=cDkAqua>;
+    ubyte Subwoofer2 <bgcolor=cDkAqua>;
+    ubyte FrontLeftWoofer <bgcolor=cDkAqua>;
+    ubyte NOT_USED <bgcolor=cDkAqua>;
+    ubyte FrontLeftTwitter <bgcolor=cDkAqua>;
+} OutputChannelsGain;
+
+byte ReferenceChannelGain <bgcolor=cAqua, read=getSignedFloat>;
+
+FSeek(FileSize() - 16);
+char CarPlatform2[5] <bgcolor=cLtGreen>;
+char FwRevision2[3] <bgcolor=cLtGreen>;
+
+FSeek(FileSize() - 4);
+char DatasetVersion[2] <bgcolor=cDkBlue>;
+ushort checksum <bgcolor=cDkRed>;
+
+local ushort file_checksum = Checksum(CHECKSUM_CRCCCITT, offset, FileSize() - offset - 2, -1, -1); // algo, size, length, poly, init 
+Printf("\n\nFILE CHECKSUM: %.04X", file_checksum);  
+
