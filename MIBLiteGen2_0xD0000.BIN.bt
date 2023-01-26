@@ -5,10 +5,10 @@
 //   Authors: Alex Strelets
 //   Version: 0.1
 //   Purpose: Parse the contents of the datasets of external amplifiers for MQB platform
-//  Category: 
-// File Mask: 
-//  ID Bytes: 
-//   History: 
+//  Category:
+// File Mask:
+//  ID Bytes:
+//   History:
 //------------------------------------------------
 
 LittleEndian();
@@ -31,7 +31,7 @@ if (offset > 0) {
             char Preset3[13] <bgcolor=cBlack, fgcolor=cDkGray>;
             char Preset4[13] <bgcolor=cBlack, fgcolor=cDkGray>;
         };
-    
+
         Presets SoundFocus;
         Presets SoundCharacter;
         Presets SoundCharacterRoofOpen;
@@ -52,7 +52,7 @@ struct {
         ubyte Q <bgcolor=cDkYellow, read=Str("%.1f", (float) this / 10)>;
 
         struct {
-            ubyte HPF_6dB_Oct <bgcolor=cYellow, read=Str(this > 0 ? "Yes" : "No")>; // HPF 6dB/Oct 
+            ubyte HPF_6dB_Oct <bgcolor=cYellow, read=Str(this > 0 ? "Yes" : "No")>; // HPF 6dB/Oct
             ubyte empty[2] <bgcolor=cBlack>;
         } Slope;
     };
@@ -93,7 +93,7 @@ string getFilterType (ubyte value) {
     } else if (value == 27) {
         return "Treble";
     } else if (value == 1) {
-        return "EQ"; 
+        return "EQ";
     }
     return "None";
 }
@@ -188,18 +188,18 @@ struct {
         byte FilterType <bgcolor=cDkGreen, read=getFilterType>;
         byte empty[2] <bgcolor=cBlack>;
     };
-    
+
     struct {
-         F_Steps SpeedSteps[19];   
+        F_Steps SpeedSteps[19];
     } SpeedBanks[3];
-    
+
     struct {
         F_Steps RPM_Steps[18];
     } RPM_Banks[2];
 
     struct {
         short Levels[8] <bgcolor=cLtYellow, read=getSignedFloat>;
-    } GainFactor;    
+    } GainFactor;
     struct {
         short start <bgcolor=cDkYellow,read=getSignedFloat>;
         short width <bgcolor=cYellow, read=getSignedFloat>;
@@ -209,7 +209,7 @@ struct {
 
 struct {
     Band Bands[3];
-    
+
     struct {
         ushort Band1 <bgcolor=cLtGreen, read=getSignedFloat>;
         ushort Band2 <bgcolor=cGreen,   read=getSignedFloat>;
@@ -241,9 +241,6 @@ struct {
     Channels Fader;
 } ChannelsBalanceFader;
 
-
-FSeek(1866 + offset);
-FSeek(1698 + offset);
 char DriverSide <bgcolor=cYellow>;
 byte EmptyByte <bgcolor=cBlack>;
 struct {
@@ -304,7 +301,7 @@ struct {
         Limiter FrontLeftWoofer;
         Limiter NOT_USED;
         Limiter FrontLeftTwitter;
-    } Limiters;   
+    } Limiters;
 
     struct {
         byte booleans[12] <bgcolor=cDkYellow>;
@@ -336,6 +333,6 @@ FSeek(FileSize() - 4);
 char DatasetVersion[2] <bgcolor=cDkBlue>;
 ushort checksum <bgcolor=cDkRed>;
 
-local ushort file_checksum = Checksum(CHECKSUM_CRCCCITT, offset, FileSize() - offset - 2, -1, -1); // algo, size, length, poly, init 
-Printf("\n\nFILE CHECKSUM: %.04X", file_checksum);  
+local ushort file_checksum = Checksum(CHECKSUM_CRCCCITT, offset, FileSize() - offset - 2, -1, -1); // algo, size, length, poly, init
+Printf("\n\nFILE CHECKSUM: %.04X", file_checksum);
 
